@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "thai-ocr"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^5.0"
+djangorestframework = "^3.14.0"
+opencv-python = "^4.8.1.78"
+pytesseract = "^0.3.10"
+pillow = "^10.1.0"
+easyocr = "^1.7.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
