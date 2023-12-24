@@ -11,10 +11,19 @@ django = "^5.0"
 djangorestframework = "^3.14.0"
 pytesseract = "^0.3.10"
 pillow = "^10.1.0"
-easyocr = "^1.7.1"
 gunicorn = "^21.2.0"
 opencv-python-headless = "^4.8.1.78"
+pyyaml = "^6.0.1"
+pandas = "^2.1.4"
+torch = {version = "^2.1.2+cpu", source = "pytorch"}
+torchvision = {version = "^0.16.2+cpu", source = "pytorch"}
+easyocr = "^1.7.1"
 
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core"]

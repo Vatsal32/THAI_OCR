@@ -93,7 +93,7 @@ class PersonalCard:
         self.sift = cv2.SIFT_create(sift_rate)
 
         if str(provider) == str(Provider.EASYOCR) or str(provider) == str(Provider.DEFAULT):
-            self.reader = easyocr.Reader(['en', 'th'], gpu=True)
+            self.reader = easyocr.Reader(['en', 'th'], gpu=False)
         self.__loadSIFT()
         self.h, self.w, *other = self.source_image_front_tempalte.shape
 

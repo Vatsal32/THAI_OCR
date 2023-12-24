@@ -18,6 +18,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'static')
 
+print(os.path.dirname)
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -28,7 +30,7 @@ SECRET_KEY = "django-insecure-tt3oeszn+6m6hqxv^s#*i*w&e=)bd&q$)t#+o((#+yyr@+qeh6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-print(os.environ.get("ALLOWED_HOSTS").split(" "))
+# print(os.environ.get("ALLOWED_HOSTS").split(" "))
 
 ALLOWED_HOSTS = ['*']
 
