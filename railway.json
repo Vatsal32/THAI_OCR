@@ -1,0 +1,18 @@
+{
+    "$schema": "https://schema.up.railway.app/railway.schema.json",
+    "build": {
+      "builder": "NIXPACKS",
+      "nixpacksPlan": {
+        "phases": {
+          "setup": {
+            "aptPkgs": ["...", "ffmpeg", "libsm6", "libxext6", "libgl1-mesa-dev", "libglib2.0-0", "cmake", "gcc", "g++", "libavcodec-dev", "libavformat-dev", "libswscale-dev", "libgstreamer-plugins-base1.0-dev", "libgstreamer1.0-dev", "libpng-dev", "libjpeg-dev", "libopenexr-dev", "libtiff-dev", "libwebp-dev"]
+          }
+        }
+      }
+    },
+    "deploy": {
+      "startCommand": "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn THAI_OCR.wsgi",
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10
+    }
+  }
