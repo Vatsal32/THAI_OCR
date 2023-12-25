@@ -22,6 +22,8 @@ def createOCRRecord(request):
         img.issueDate = reader.cardInfo['mix']["DateOfIssueEN"]
             
         img.save()
+        
+        print(img.data)
             
         return Response({"message": "Hello World!", "result": img.data}, status=status.HTTP_200_OK)
     except KeyError:
