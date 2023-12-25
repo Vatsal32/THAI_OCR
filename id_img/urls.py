@@ -1,8 +1,6 @@
 from django.urls import path, include
-from .views import (
-    Id_Img_API,
-)
+from .views import createOCRRecord
 
 urlpatterns = [
-    path('media/', Id_Img_API.as_view()),
+    path('media/', createOCRRecord, name='Add an ID'),
 ]
