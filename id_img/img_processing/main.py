@@ -1,38 +1,25 @@
-from .utils import Language, Provider, Card, remove_dot_noise
-from collections import namedtuple
-import re
-import os
 import cv2
-import sys
 import yaml
-import base64, binascii
 import numpy as np
+import base64
+import binascii
+import os
 import pytesseract
-import easyocr
+from collections import namedtuple
 from PIL import Image
-from pathlib import Path
+from .utils import Card, Language, remove_dot_noise
 
 
-class PersonalCard:
-    def __init__(self,
-                 lang: Language = Language.MIX,
-                 provider: Provider = Provider.DEFAULT,
-                 template_threshold: float = 0.7,
-                 sift_rate: int = 25000,
-                 tesseract_cmd: str = None,
-                 save_extract_result: bool = False,
-                 path_to_save: str = None):
-
-        self.lang = lang
-        self.provider = provider
-        self.root_path = Path(__file__).parent.parent
-        self.template_threshold = template_threshold
-        self.image = None
-        self.save_extract_result = save_extract_result
-        self.path_to_save = path_to_save
+class THAI_ID_CARD:
+    def __init__(self, sift_rate = 25000, template_threshold: float = 0.7,) -> None:
+        self.lang = Language.MIX
         self.index_params = dict(algorithm=0, tree=5)
         self.search_params = dict()
-        self.good = []
+        self.flann = cv2.FlannBasedMatcher(self.index_params, self.search_params)
+        self.sift = cv2.SIFT_create(sift_rate)
+        self.template_threshold = template_threshold
+        self.__loadsift()
+        self.h, self.w, *other = self.source_image_front_tempalte.shape
         self.cardInfo = {
             "mix": {
                 "Identification_Number": "",
@@ -79,26 +66,8 @@ class PersonalCard:
                 "LaserCode": "",
             }
         }
-
-        if sys.platform.startswith("win"):
-            if tesseract_cmd == None:
-                raise ValueError("Please define your tesseract command path.")
-            pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
-
-        if save_extract_result == True:
-            if path_to_save == None or path_to_save == "":
-                raise ValueError("Please define your path to save extracted images.")
-
-        self.flann = cv2.FlannBasedMatcher(self.index_params, self.search_params)
-        self.sift = cv2.SIFT_create(sift_rate)
-
-        if str(provider) == str(Provider.EASYOCR) or str(provider) == str(Provider.DEFAULT):
-            self.reader = easyocr.Reader(['en', 'th'], gpu=False)
-        self.__loadSIFT()
-        self.h, self.w, *other = self.source_image_front_tempalte.shape
-
-    def __loadSIFT(self):
-        print(os.getcwd() + '/datasets/identity_card/personal-card-template.jpg')
+        
+    def __loadsift(self):
         self.source_image_front_tempalte = self.__readImage('./id_img/img_processing/datasets/identity_card/personal-card-template.jpg')
         self.source_image_back_tempalte = self.__readImage('./id_img/img_processing/datasets/identity_card/personal-card-back-template.jpg')
         self.source_front_kp, self.source_front_des = self.sift.detectAndCompute(self.source_image_front_tempalte, None)
@@ -108,7 +77,7 @@ class PersonalCard:
                 self.roi_extract = yaml.safe_load(f)
             except yaml.YAMLError as exc:
                 raise ValueError(f"Can't load config file {exc}.")
-
+            
     def __readImage(self, image=None):
         try:
             try:
@@ -128,14 +97,14 @@ class PersonalCard:
             return img
         except cv2.error as e:
             raise ValueError(f"Can't read image from source. cause {e.msg}")
-
+        
     def __compareTemplateSimilarity(self, queryDescriptors, trainDescriptors):
         self.good = []
         matches = self.flann.knnMatch(queryDescriptors, trainDescriptors, k=2)
         for x, y in matches:
             if x.distance < self.template_threshold * y.distance:
                 self.good.append(x)
-
+                
     def __findAndWrapObject(self, side: Card = Card.FRONT_TEMPLATE):
         if len(self.good) > 30:
             processPoints = np.float32([self.process_kp[m.queryIdx].pt for m in self.good]).reshape(-1, 1, 2)
@@ -150,9 +119,9 @@ class PersonalCard:
         else:
             self.image_scan = self.image
 
-        if self.save_extract_result:
-            cv2.imwrite(os.path.join(self.path_to_save, 'image_scan.jpg'), self.image_scan)
-
+        # if self.save_extract_result:
+        #     cv2.imwrite(os.path.join(self.path_to_save, 'image_scan.jpg'), self.image_scan)
+            
     def __extractItems(self, side: Card = Card.FRONT_TEMPLATE):
         for index, box in enumerate(
                 self.roi_extract["roi_extract"][str(side)] if str(self.lang) == str(Language.MIX) else filter(
@@ -164,25 +133,8 @@ class PersonalCard:
             if str(side) == str(Card.BACK_TEMPLATE):
                 imgCrop = remove_dot_noise(imgCrop)
 
-            if str(self.provider) == Provider.DEFAULT.value:
-                if str(box["provider"]) == str(str(Provider.EASYOCR)):
-                    self.cardInfo[str(self.lang)][box["name"]] = " ".join(str.strip(
-                        "".join(self.reader.readtext(imgCrop, batch_size=4 ,detail=0, paragraph=False , width_ths=1.0, blocklist=box["blocklist"]))).split())
-                elif str(box["provider"]) == str(Provider.TESSERACT):
-                    self.cardInfo[str(self.lang)][box["name"]] = str.strip(
-                        " ".join(pytesseract.image_to_string(imgCrop, lang=box["lang"].split(",")[0],
-                                                             config=box["tesseract_config"])
-                                 .replace('\n', '')
-                                 .replace('\x0c', '')
-                                 .replace('-', '')
-                                 .replace('"', '')
-                                 .replace("'", '')
-                                 .split()))
-            elif str(self.provider) == str(Provider.EASYOCR):
-                self.cardInfo[str(self.lang)][box["name"]] = " ".join(str.strip(
-                    "".join(self.reader.readtext(imgCrop, batch_size=4 ,detail=0, paragraph=False , width_ths=1.0, blocklist=box["blocklist"]))).split())
-            elif str(self.provider) == str(Provider.TESSERACT):
-                self.cardInfo[str(self.lang)][box["name"]] = str.strip(
+            
+            self.cardInfo[str(self.lang)][box["name"]] = str.strip(
                     " ".join(pytesseract.image_to_string(imgCrop, lang=box["lang"].split(",")[0],
                                                          config=box["tesseract_config"])
                              .replace('\n', '')
@@ -192,46 +144,25 @@ class PersonalCard:
                              .replace("'", '')
                              .split()))
 
-            if self.save_extract_result:
-                Image.fromarray(imgCrop).save(os.path.join(self.path_to_save, f'{box["name"]}.jpg'), compress_level=3)
+            # if self.save_extract_result:
+            #     Image.fromarray(imgCrop).save(os.path.join(self.path_to_save, f'{box["name"]}.jpg'), compress_level=3)
+                
+        extract_th = self.cardInfo[str(self.lang)]["FullNameTH"].split(' ')
+        self.cardInfo[str(self.lang)]["PrefixTH"] = str("".join(extract_th[0]))
+        self.cardInfo[str(self.lang)]["NameTH"] = str(
+            "".join(extract_th[1] if len(extract_th) > 2 else extract_th[-1]))
+        self.cardInfo[str(self.lang)]["LastNameTH"] = str("".join(extract_th[-1]))
 
-        if str(self.lang) == str(Language.MIX) and str(side) == str(Card.FRONT_TEMPLATE):
-            extract_th = self.cardInfo[str(self.lang)]["FullNameTH"].split(' ')
-            self.cardInfo[str(self.lang)]["PrefixTH"] = str("".join(extract_th[0]))
-            self.cardInfo[str(self.lang)]["NameTH"] = str(
-                "".join(extract_th[1] if len(extract_th) > 2 else extract_th[-1]))
-            self.cardInfo[str(self.lang)]["LastNameTH"] = str("".join(extract_th[-1]))
-
-            extract_en = self.cardInfo[str(self.lang)]["NameEN"].split(' ')
-            self.cardInfo[str(self.lang)]["PrefixEN"] = str("".join(extract_en[0]))
-            self.cardInfo[str(self.lang)]["NameEN"] = str("".join(extract_en[1:]))
-        elif str(self.lang) == str(Language.THAI) and str(side) == str(Card.FRONT_TEMPLATE):
-            extract_th = self.cardInfo[str(self.lang)]["FullNameTH"].split(' ')
-            self.cardInfo[str(self.lang)]["PrefixTH"] = str("".join(extract_th[0]))
-            self.cardInfo[str(self.lang)]["NameTH"] = str(
-                "".join(extract_th[1] if len(extract_th) > 2 else extract_th[-1]))
-            self.cardInfo[str(self.lang)]["LastNameTH"] = str("".join(extract_th[-1]))
-        elif str(self.lang) == str(Language.ENGLISH) and str(side) == str(Card.FRONT_TEMPLATE):
-            extract_en = self.cardInfo[str(self.lang)]["NameEN"].split(' ')
-            self.cardInfo[str(self.lang)]["PrefixEN"] = str(extract_en[0])
-            self.cardInfo[str(self.lang)]["NameEN"] = str(extract_en[1:])
-
-        if str(side) == str(Card.BACK_TEMPLATE):
-            self.cardInfo[str(self.lang)]["LaserCode"] = "".join(re.findall("([a-zA-Z0-9])",self.cardInfo[str(self.lang)]["LaserCode"])).upper()
-
+        extract_en = self.cardInfo[str(self.lang)]["NameEN"].split(' ')
+        self.cardInfo[str(self.lang)]["PrefixEN"] = str("".join(extract_en[0]))
+        self.cardInfo[str(self.lang)]["NameEN"] = str("".join(extract_en[1:]))
+        
         _card = namedtuple('Card', self.cardInfo[str(self.lang)].keys())(*self.cardInfo[str(self.lang)].values())
         return _card
-
-    def extract_front_info(self, image):
+        
+    def readFrontImage(self, image):
         self.image = self.__readImage(image)
         self.process_kp, self.process_des = self.sift.detectAndCompute(self.image, None)
         self.__compareTemplateSimilarity(self.process_des, self.source_front_des)
         self.__findAndWrapObject(Card.FRONT_TEMPLATE)
         return self.__extractItems()
-
-    def extract_back_info(self, image):
-        self.image = self.__readImage(image)
-        self.process_kp, self.process_des = self.sift.detectAndCompute(self.image, None)
-        self.__compareTemplateSimilarity(self.process_des, self.source_back_des)
-        self.__findAndWrapObject(Card.BACK_TEMPLATE)
-        return self.__extractItems(side = Card.BACK_TEMPLATE)

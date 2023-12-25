@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework import permissions
 from rest_framework.exceptions import ParseError
 from .models import MyModel
-from .img_processing.temp import PersonalCard
+from .img_processing.main import THAI_ID_CARD
 
 class Id_Img_API(APIView):
     permission_classes = [permissions.AllowAny]
@@ -16,8 +16,8 @@ class Id_Img_API(APIView):
         try:
             file = request.data['file']
             img = MyModel.objects.create(image_url=file)
-            reader = PersonalCard(lang="mix")
-            result = reader.extract_front_info('./' + str(img.image_url))
+            reader = THAI_ID_CARD()
+            result = reader.readFrontImage('./' + str(img.image_url))
             return Response({"message": "Hello World!", "result": reader.cardInfo['mix']}, status=status.HTTP_200_OK)
         except KeyError:
             raise ParseError('Request has no file attached')
