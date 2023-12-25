@@ -15,9 +15,7 @@ gunicorn = "^21.2.0"
 opencv-python-headless = "^4.8.1.78"
 pyyaml = "^6.0.1"
 pandas = "^2.1.4"
-torch = {version = "^2.1.2+cpu", source = "pytorch"}
-easyocr = "^1.7.1"
-torchvision = {version = "^0.16.2+cpu", source = "pytorch"}
+opencv-python = "^4.8.1.78"
 
 
 [[tool.poetry.source]]
