@@ -5,4 +5,4 @@ from .models import OCRRecord
 class OCRRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = OCRRecord
-        fields = ("id_num", "prefix", "firstName", "lastName", "dateOfBirth", "issueDate", "expiryDate")
+        fields = ("id", "id_num", "prefix", "firstName", "lastName", "dateOfBirth", "issueDate", "expiryDate")
